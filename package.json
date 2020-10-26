@@ -1,0 +1,15 @@
+{
+	"author": "Blue Mountains",
+	"version": "1.0",
+	"server_scripts": [
+		"prophunt_s.lua"
+	],
+	"client_scripts": [
+		"prophunt_c.lua"
+	],
+	"files": [
+		"sounds/ui_interact1.mp3",
+		"sounds/bruh.m4a",
+		"sounds/dolphin.m4a"
+	]
+}
