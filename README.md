@@ -1,4 +1,4 @@
-### Onset Prophunt Gamemode
+## Onset Prophunt Gamemode
 
-## License
+### License
 This software is published under the "Onset Open Source License". See LICENSE.txt.

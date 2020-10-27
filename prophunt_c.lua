@@ -5,21 +5,26 @@ Prophunt client
 ]]--
 
 local Props = { }
+local GameTime = ""
 local LastTracedComp
 local TraceTimeMS = 80
 local TraceRange = 1000.0
 local TraceTimer = 0
 local DisableFootstepSoundsForProps = false
-local PropSoundRange = 1500.0
+local PropSoundRange = 1800.0
 local PropSounds = {
 	"sounds/bruh.m4a",
-	"sounds/du_penner.mp3",
-	"sounds/moneyboysheesh.mp3",
-	"sounds/dolphin.m4a",
-	"sounds/okcool.mp3"
+	"sounds/dolphin.m4a"
 }
 
+local KeySwitchProps = "Left Mouse Button"
+local KeyTaunt = "X"
+local KeyRotate = "Left Ctrl"
+local KeyBecomeProp = "K"
+
 AddEvent("OnPackageStart", function()
+
+	print("Prophunt loading")
 
 	LoadOutlineMat()
 
@@ -35,8 +40,9 @@ AddEvent("OnPackageStart", function()
 		local bResult, HitResult = UKismetSystemLibrary.LineTraceSingle(GetPlayerActor(), Start, End, ETraceTypeQuery.TraceTypeQuery1, true, {}, EDrawDebugTrace.None, true, FLinearColor(1.0, 0.0, 0.0, 1.0), FLinearColor(0.0, 1.0, 0.0, 1.0), 10.0)
 		
 		if bResult == true then
+			local Actor = HitResult:GetActor()
 			local Comp = HitResult:GetComponent()
-			if Comp then
+			if Actor:ActorHasTag("Prophunt") and Comp then
 				if Comp:IsA(UStaticMeshComponent.Class()) then
 					Comp:SetRenderCustomDepth(true)
 					if LastTracedComp and LastTracedComp:GetUniqueID() ~= Comp:GetUniqueID() then -- TODO: Add __eq
@@ -57,7 +63,7 @@ AddEvent("OnPackageStart", function()
 			end
 		end
 	end, TraceTimeMS)
-	
+
 end)
 
 AddEvent("OnPackageStop", function()
@@ -131,7 +137,9 @@ function SetPropInternal(player, mesh)
 		SetCameraViewDistance(ViewDist)
 		SetPlayerRotationRate(720.0)
 		SetPlayerJumpZVelocity(600.0)
-		CreateSound("ui_interact1.mp3")
+		ShowWeaponHUD(false)
+		ShowHealthHUD(false)
+		CreateSound("sounds/ui_interact1.mp3")
 	else
 		TogglePlayerTag(player, "name", false)
 		TogglePlayerTag(player, "health", false)
@@ -162,12 +170,12 @@ function ConfigurePlayerCollisions()
 				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
 				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
 				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
-				AddPlayerChat("Ignoring colis "..v)
+				--AddPlayerChat("Ignoring colis "..v)
 			else
 				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
 				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
 				--Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
-				AddPlayerChat("NOT Ignoring colis "..v)
+				--AddPlayerChat("NOT Ignoring colis "..v)
 			end
 		end
 	end
@@ -225,14 +233,40 @@ AddEvent("OnPlayerSpawn", function()
 	LoadOutlineMat()
 end)
 
+AddEvent("OnRenderHUD", function()
+	local ScreenX, ScreenY = GetScreenSize()
+	
+	SetDrawColor(RGB(255, 0, 0))
+	SetTextDrawScale(1.4, 1.4)
+	DrawText(30.0, ScreenY - 90.0, "HEALTH: "..tostring(math.floor(GetPlayerHealth()+0.5)))
+
+	SetDrawColor(RGB(255, 255, 255))
+	SetTextDrawScale(1.0, 1.0)
+	DrawText(30.0, ScreenY - 60.0, "TIME "..GameTime)
+	DrawText(30.0, ScreenY - 40.0, "Props 0 Hunter 0")
+
+	SetTextDrawScale(1.3, 1.3)
+	SetDrawColor(RGB(255, 113, 0))
+	DrawText(ScreenX - 200.0, ScreenY - 130, "CONTROLS")
+	SetDrawColor(RGB(255, 255, 255))
+	SetTextDrawScale(1.0, 1.0)
+	DrawText(ScreenX - 200.0, ScreenY - 100, "Switch Props: "..KeySwitchProps)
+	DrawText(ScreenX - 200.0, ScreenY - 80, "Taunt: "..KeyTaunt)
+	DrawText(ScreenX - 200.0, ScreenY - 60, "Rotate: "..KeyRotate)
+	DrawText(ScreenX - 200.0, ScreenY - 40, "Become a Prop: "..KeyBecomeProp)
+
+	DrawText(ScreenX / 2.0 - 50.0, ScreenY - 20, "github.com/BlueMountainsIO/prophunt")
+end)
+
 AddEvent("OnKeyPress", function(k)
-	if k == "Z" then
+
+	if k == KeyBecomeProp then
 		local Asset = "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01"
 		SetPlayerPropByAsset(GetPlayerId(), Asset)
 		CallRemoteEvent("Prophunt:SwitchProp", Asset)
 	end
 	
-	if k == "Left Mouse Button" then	
+	if k == KeySwitchProps then	
 		if LastTracedComp and LastTracedComp:IsValid() then
 			local SMC = Cast(UStaticMeshComponent.Class(), LastTracedComp)
 			if SMC then
@@ -243,7 +277,7 @@ AddEvent("OnKeyPress", function(k)
 		end
 	end
 	
-	if k == "X" then
+	if k == KeyTaunt then
 		if Props[GetPlayerId()] ~= nil then
 			local r = Random(1, table.len(PropSounds))
 			local x, y, z = GetPlayerLocation()
@@ -251,4 +285,19 @@ AddEvent("OnKeyPress", function(k)
 			CallRemoteEvent("Prophunt:PlaySound", r)
 		end
 	end
+
+	if k == KeyRotate then
+		if Props[GetPlayerId()] ~= nil then
+			local PlayerActor = GetPlayerActor()
+			local Rotation = PlayerActor:GetActorRotation()
+			PlayerActor:SetActorRotation(Rotation + FRotator(0.0, 90.0, 0.0))
+			--local Rotation = Props[GetPlayerId()]:GetRelativeRotation()
+			--Props[GetPlayerId()]:SetRelativeRotation(Rotation + FRotator(0.0, 90.0, 0.0))
+		end
+	end
+
+end)
+
+AddRemoteEvent("Prophunt:SetGameTime", function(ServerGameTime)
+	GameTime = math.floor(tostring(ServerGameTime / 60))..":"..tostring(ServerGameTime % 60)
 end)
