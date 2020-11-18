@@ -222,9 +222,12 @@ AddEvent("OnPlayerNetworkUpdatePropertyValue", function(player, propertyName, pr
 	if propertyName == "PropAsset" then
 		SetPlayerPropByAsset(player, propertyValue)
 	elseif propertyName == "PropSound" then
+		local x, y, z = GetPlayerLocation(player)
+		CreateSound3D(PropSounds[propertyValue], x, y, z, PropSoundRange)
+	elseif propertyName == "PropRotation" then
 		if player ~= GetPlayerId() then
-			local x, y, z = GetPlayerLocation(player)
-			CreateSound3D(PropSounds[propertyValue], x, y, z, PropSoundRange)
+			local Rotation = Props[player]:GetRelativeRotation()
+			Props[player]:SetRelativeRotation(FRotator(0.0, propertyValue, 0.0))
 		end
 	end
 end)
@@ -255,7 +258,10 @@ AddEvent("OnRenderHUD", function()
 	DrawText(ScreenX - 200.0, ScreenY - 60, "Rotate: "..KeyRotate)
 	DrawText(ScreenX - 200.0, ScreenY - 40, "Become a Prop: "..KeyBecomeProp)
 
-	DrawText(ScreenX / 2.0 - 50.0, ScreenY - 20, "github.com/BlueMountainsIO/prophunt")
+	DrawText(ScreenX / 2.0 - 70.0, ScreenY - 20, "github.com/BlueMountainsIO/prophunt")
+
+	SetTextDrawScale(1.3, 1.3)
+	DrawText(ScreenX / 2.0 - 70.0, 20, "Waiting for players")
 end)
 
 AddEvent("OnKeyPress", function(k)
@@ -280,24 +286,23 @@ AddEvent("OnKeyPress", function(k)
 	if k == KeyTaunt then
 		if Props[GetPlayerId()] ~= nil then
 			local r = Random(1, table.len(PropSounds))
-			local x, y, z = GetPlayerLocation()
-			CreateSound3D(PropSounds[r], x, y, z, PropSoundRange)
 			CallRemoteEvent("Prophunt:PlaySound", r)
 		end
 	end
 
 	if k == KeyRotate then
 		if Props[GetPlayerId()] ~= nil then
-			local PlayerActor = GetPlayerActor()
-			local Rotation = PlayerActor:GetActorRotation()
-			PlayerActor:SetActorRotation(Rotation + FRotator(0.0, 90.0, 0.0))
-			--local Rotation = Props[GetPlayerId()]:GetRelativeRotation()
-			--Props[GetPlayerId()]:SetRelativeRotation(Rotation + FRotator(0.0, 90.0, 0.0))
+			--local PlayerActor = GetPlayerActor()
+			--local Rotation = PlayerActor:GetActorRotation()
+			--PlayerActor:SetActorRotation(Rotation + FRotator(0.0, 90.0, 0.0))
+			local Rotation = Props[GetPlayerId()]:GetRelativeRotation()
+			Props[GetPlayerId()]:SetRelativeRotation(Rotation + FRotator(0.0, 90.0, 0.0))
+			CallRemoteEvent("Prophunt:ChangeRotation", Props[GetPlayerId()]:GetRelativeRotation().Yaw)
 		end
 	end
 
 end)
 
 AddRemoteEvent("Prophunt:SetGameTime", function(ServerGameTime)
-	GameTime = math.floor(tostring(ServerGameTime / 60))..":"..tostring(ServerGameTime % 60)
+	GameTime = string.format("%02d:%02d", math.floor(tostring(ServerGameTime / 60)), math.floor(tostring(tostring(ServerGameTime % 60))))
 end)
