@@ -16,15 +16,29 @@ local PropSounds = {
 	"sounds/bruh.m4a",
 	"sounds/dolphin.m4a"
 }
+local WaitingForPlayers = true
+local HunterWaitTime = 30000
+MyPropHuntRole = ""
+local round_number
+local HunterWeaponCheckTimer
 
 local KeySwitchProps = "Left Mouse Button"
 local KeyTaunt = "X"
 local KeyRotate = "Left Ctrl"
 local KeyBecomeProp = "K"
 
+function CheckForHunterWeapon()
+	local weapid, ammo, ammoinmagazine = GetPlayerWeapon(1)
+	if (MyPropHuntRole == "hunter" and weapid ~= 11) then
+	    CallRemoteEvent("SetWeaponHunter")
+	end
+end
+
 AddEvent("OnPackageStart", function()
 
 	print("Prophunt loading")
+
+    HunterWeaponCheckTimer = CreateTimer(CheckForHunterWeapon, 1000)
 
 	LoadOutlineMat()
 
@@ -183,17 +197,18 @@ end
 
 AddEvent("OnPlayerStreamIn", function(player)
 	local PropAsset = GetPlayerPropertyValue(player, "PropAsset")
+	SetPlayerClothingPreset(player, 29)
 
 	if PropAsset ~= nil then
 		SetPlayerPropByAsset(player, PropAsset)
-	end	
+	end
 end)
 
 AddEvent("OnPlayerStreamOut", function(player)
 	if Props[player] and Props[player]:IsValid() then
 		Props[player]:Destroy()
 		Props[player] = nil
-	end	
+	end
 end)
 
 if DisableFootstepSoundsForProps then
@@ -220,7 +235,17 @@ end)
 
 AddEvent("OnPlayerNetworkUpdatePropertyValue", function(player, propertyName, propertyValue)
 	if propertyName == "PropAsset" then
-		SetPlayerPropByAsset(player, propertyValue)
+		if propertyValue then
+			SetPlayerPropByAsset(player, propertyValue)
+		else
+			if Props[player] and Props[player]:IsValid() then
+				--AddPlayerChat("CALLED FOR " .. tostring(player))
+				Props[player]:Destroy()
+				Props[player] = nil
+			end
+			local Body = GetPlayerSkeletalMeshComponent(player, "Body")
+            Body:SetVisibility(true, false)
+		end
 	elseif propertyName == "PropSound" then
 		local x, y, z = GetPlayerLocation(player)
 		CreateSound3D(PropSounds[propertyValue], x, y, z, PropSoundRange)
@@ -234,6 +259,12 @@ end)
 
 AddEvent("OnPlayerSpawn", function()
 	LoadOutlineMat()
+	SetPlayerClothingPreset(GetPlayerId(), 29)
+	if (MyPropHuntRole ~= "hunter" and MyPropHuntRole ~= "spec") then
+		local Asset = "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01"
+		SetPlayerPropByAsset(GetPlayerId(), Asset)
+		CallRemoteEvent("Prophunt:SwitchProp", Asset)
+	end
 end)
 
 AddEvent("OnRenderHUD", function()
@@ -245,8 +276,8 @@ AddEvent("OnRenderHUD", function()
 
 	SetDrawColor(RGB(255, 255, 255))
 	SetTextDrawScale(1.0, 1.0)
-	DrawText(30.0, ScreenY - 60.0, "TIME "..GameTime)
-	DrawText(30.0, ScreenY - 40.0, "Props 0 Hunter 0")
+	DrawText(30.0, ScreenY - 60.0, "TIME: ".. GameTime)
+	DrawText(30.0, ScreenY - 40.0, "Props 0, Hunter 0")
 
 	SetTextDrawScale(1.3, 1.3)
 	SetDrawColor(RGB(255, 113, 0))
@@ -256,24 +287,28 @@ AddEvent("OnRenderHUD", function()
 	DrawText(ScreenX - 200.0, ScreenY - 100, "Switch Props: "..KeySwitchProps)
 	DrawText(ScreenX - 200.0, ScreenY - 80, "Taunt: "..KeyTaunt)
 	DrawText(ScreenX - 200.0, ScreenY - 60, "Rotate: "..KeyRotate)
-	DrawText(ScreenX - 200.0, ScreenY - 40, "Become a Prop: "..KeyBecomeProp)
+	--DrawText(ScreenX - 200.0, ScreenY - 40, "Become a Prop: "..KeyBecomeProp)
 
 	DrawText(ScreenX / 2.0 - 70.0, ScreenY - 20, "github.com/BlueMountainsIO/prophunt")
 
-	SetTextDrawScale(1.3, 1.3)
-	DrawText(ScreenX / 2.0 - 70.0, 20, "Waiting for players")
+	if WaitingForPlayers then
+	    SetTextDrawScale(1.3, 1.3)
+	    DrawText(ScreenX / 2.0 - 70.0, 20, "Waiting for players")
+	end
+
+	SetTextDrawScale(1, 1)
 end)
 
 AddEvent("OnKeyPress", function(k)
 
-	if k == KeyBecomeProp then
+	--[[if k == KeyBecomeProp then
 		local Asset = "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01"
 		SetPlayerPropByAsset(GetPlayerId(), Asset)
 		CallRemoteEvent("Prophunt:SwitchProp", Asset)
-	end
+	end]]--
 	
-	if k == KeySwitchProps then	
-		if LastTracedComp and LastTracedComp:IsValid() then
+	if k == KeySwitchProps then
+		if (LastTracedComp and LastTracedComp:IsValid() and MyPropHuntRole ~= "hunter" and MyPropHuntRole ~= "spec") then
 			local SMC = Cast(UStaticMeshComponent.Class(), LastTracedComp)
 			if SMC then
 				local mesh = SMC:GetStaticMesh()
@@ -305,4 +340,39 @@ end)
 
 AddRemoteEvent("Prophunt:SetGameTime", function(ServerGameTime)
 	GameTime = string.format("%02d:%02d", math.floor(tostring(ServerGameTime / 60)), math.floor(tostring(tostring(ServerGameTime % 60))))
+end)
+
+AddRemoteEvent("SetRoleClient", function(role, round_nb)
+	MyPropHuntRole = role
+	round_number = round_nb
+	if MyPropHuntRole == "" then
+		WaitingForPlayers = true
+		
+	elseif MyPropHuntRole == "hunter" then
+		local ScreenX, ScreenY = GetScreenSize()
+		local textbox = CreateTextBox((ScreenX / 2) - 25, ScreenY / 2, "Wait " .. tostring(HunterWaitTime / 1000) .. "s", "left")
+		SetIgnoreMoveInput(true)
+		SetIgnoreLookInput(true)
+		SetCameraLocation(0, 0, -200, true)
+		Delay(2000, function()
+		    SetIgnoreMoveInput(true)
+		    SetIgnoreLookInput(true)
+		    SetCameraLocation(0, 0, -200, true)
+		end)
+		Delay(HunterWaitTime, function()
+			if round_number == round_nb then
+				SetIgnoreMoveInput(false)
+				SetIgnoreLookInput(false)
+				SetCameraLocation(0, 0, 0, false)
+				DestroyTextBox(textbox)
+			end
+		end)
+		WaitingForPlayers = false
+	else
+		WaitingForPlayers = false
+	end
+end)
+
+AddEvent("OnScriptError", function(message)
+    AddPlayerChat(message)
 end)
