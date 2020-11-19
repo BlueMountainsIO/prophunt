@@ -27,7 +27,7 @@ AddRemoteEvent("SpecRemoteEvent",function(bool,plyid,x,y,z)
         MyPropHuntRole = "spec"
         specply = plyid
         actor = GetPlayerActor(GetPlayerId())
-        actor:SetActorLocation(FVector( x,y,0))
+        actor:SetActorLocation(FVector( x,y,z))
         if checktimer then
             DestroyTimer(checktimer)
         end
@@ -97,9 +97,10 @@ end)
 AddEvent("OnPlayerNetworkUpdatePropertyValue", function(ply, propertyName, propertyValue)
     if (ply ~= GetPlayerId() and propertyName == "Spectating") then
         if not propertyValue then
-            local Body = GetPlayerSkeletalMeshComponent(ply, "Body")
-            Body:SetVisibility(true, false)
+            AddPlayerChat("oh no " .. tostring(ply))
+            ResetPlayerCapsuleAndBody(ply)
         else
+            AddPlayerChat("no u " .. tostring(ply))
             local Body = GetPlayerSkeletalMeshComponent(ply, "Body")
             Body:SetVisibility(false, false)
         end

@@ -179,16 +179,21 @@ function ConfigurePlayerCollisions()
 		local PlayerActor = GetPlayerActor(v)
 		if PlayerActor then
 			local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
-			if Props[v] ~= nil and Props[GetPlayerId()] ~= nil then
+			if (Props[v] ~= nil and Props[GetPlayerId()] ~= nil) then
 				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
 				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
 				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
 				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
 				--AddPlayerChat("Ignoring colis "..v)
 			else
-				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+				--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
 				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
-				--Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+				if Props[v] then
+					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+					Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+				else
+					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+				end
 				--AddPlayerChat("NOT Ignoring colis "..v)
 			end
 		end
@@ -233,18 +238,28 @@ AddEvent("OnPlayerCrouch", function(toggle)
 	end
 end)
 
+function ResetPlayerCapsuleAndBody(player)
+    if Props[player] and Props[player]:IsValid() then
+		--AddPlayerChat("CALLED FOR " .. tostring(player))
+		Props[player]:Destroy()
+		Props[player] = nil
+	end
+	local Body = GetPlayerSkeletalMeshComponent(player, "Body")
+	Body:SetVisibility(true, false)
+	local PlayerActor = GetPlayerActor(player)
+	local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
+	Capsule:SetCapsuleSize(30.0, 93.0, true)
+	ConfigurePlayerCollisions()
+	AddPlayerChat("RESET : " .. tostring(player))
+end
+
 AddEvent("OnPlayerNetworkUpdatePropertyValue", function(player, propertyName, propertyValue)
 	if propertyName == "PropAsset" then
 		if propertyValue then
+			AddPlayerChat("SetPlayerPropByAsset : " .. tostring(player))
 			SetPlayerPropByAsset(player, propertyValue)
 		else
-			if Props[player] and Props[player]:IsValid() then
-				--AddPlayerChat("CALLED FOR " .. tostring(player))
-				Props[player]:Destroy()
-				Props[player] = nil
-			end
-			local Body = GetPlayerSkeletalMeshComponent(player, "Body")
-            Body:SetVisibility(true, false)
+			ResetPlayerCapsuleAndBody(player)
 		end
 	elseif propertyName == "PropSound" then
 		local x, y, z = GetPlayerLocation(player)
@@ -260,10 +275,13 @@ end)
 AddEvent("OnPlayerSpawn", function()
 	LoadOutlineMat()
 	SetPlayerClothingPreset(GetPlayerId(), 29)
-	if (MyPropHuntRole ~= "hunter" and MyPropHuntRole ~= "spec") then
+	if (MyPropHuntRole == "prop" or MyPropHuntRole == "") then
 		local Asset = "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01"
 		SetPlayerPropByAsset(GetPlayerId(), Asset)
 		CallRemoteEvent("Prophunt:SwitchProp", Asset)
+	elseif MyPropHuntRole == "spec" then
+        local Body = GetPlayerSkeletalMeshComponent(GetPlayerId(), "Body")
+		Body:SetVisibility(false, false)
 	end
 end)
 
@@ -347,29 +365,26 @@ AddRemoteEvent("SetRoleClient", function(role, round_nb)
 	round_number = round_nb
 	if MyPropHuntRole == "" then
 		WaitingForPlayers = true
-		
 	elseif MyPropHuntRole == "hunter" then
 		local ScreenX, ScreenY = GetScreenSize()
 		local textbox = CreateTextBox((ScreenX / 2) - 25, ScreenY / 2, "Wait " .. tostring(HunterWaitTime / 1000) .. "s", "left")
 		SetIgnoreMoveInput(true)
 		SetIgnoreLookInput(true)
-		SetCameraLocation(0, 0, -200, true)
-		Delay(2000, function()
-		    SetIgnoreMoveInput(true)
-		    SetIgnoreLookInput(true)
-		    SetCameraLocation(0, 0, -200, true)
-		end)
 		Delay(HunterWaitTime, function()
-			if round_number == round_nb then
+			if (round_number == round_nb or round_number == -1) then
 				SetIgnoreMoveInput(false)
 				SetIgnoreLookInput(false)
-				SetCameraLocation(0, 0, 0, false)
-				DestroyTextBox(textbox)
+				if MyPropHuntRole == "hunter" then
+				    GetPlayerActor(GetPlayerId()):SetActorLocation(FVector(2288, -170, 275))
+				end
 			end
+			DestroyTextBox(textbox)
 		end)
 		WaitingForPlayers = false
+		ConfigurePlayerCollisions()
 	else
 		WaitingForPlayers = false
+		ConfigurePlayerCollisions()
 	end
 end)
 

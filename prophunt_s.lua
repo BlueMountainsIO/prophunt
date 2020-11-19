@@ -11,21 +11,25 @@ local Timer = 0
 local WeaponsTimer
 local GameState = 0 -- 0 : waiting, 1 : in game
 local round_number = 0
+local last_role = "prop"
 
-function CheckToRestart(from_quit)
+function CheckToRestart(from_quit_player)
 	local soustract = 0
 	GameState = 0
 	if Timer ~= 0 then
 		DestroyTimer(Timer)
 		Timer = 0
 	end
-	if from_quit then
+	if from_quit_player then
         soustract = 1
 	end
 	if GetPlayerCount() - soustract > 1 then
 		StartNewRound()
 	elseif GetPlayerCount() - soustract == 1 then
 		local ply = GetAllPlayers()[1]
+		if ply == from_quit_player then
+            ply = GetAllPlayers()[2]
+		end
 		Players[ply].role = ""
 		CallRemoteEvent(ply, "SetRoleClient", "", -1)
 		CallRemoteEvent(ply, "SpecRemoteEvent", false)
@@ -37,7 +41,12 @@ end
 
 function StartNewRound()
 	GameState = 1
-	local role = "prop"
+	local role = last_role
+	if role == "prop" then
+		last_role = "hunter"
+	else
+		last_role = "prop"
+	end
 	round_number = round_number + 1
 	for k, v in pairs(Players) do
 		if role == "prop" then
@@ -47,18 +56,20 @@ function StartNewRound()
 			SetPlayerPropertyValue(k, "PropAsset", "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01")
 			SetPlayerPropertyValue(k, "PropRotation", 0.0)
 			Players[k].role = "prop"
-			CallRemoteEvent(k, "SetRoleClient", Players[k].role)
+			CallRemoteEvent(k, "SetRoleClient", Players[k].role, round_number)
+			SetPlayerLocation(k, 2288.000000, -170, 275)
+			SetPlayerSpawnLocation(k, 2288.000000, -170, 275, 90.0)
 		elseif role == "hunter" then
 			role = "prop"
 			CallRemoteEvent(k, "SpecRemoteEvent", false)
 			SetPlayerPropertyValue(k, "Spectating", nil)
 			SetPlayerPropertyValue(k, "PropAsset", nil)
-			SetPlayerHealth(k, 0)
 			Players[k].role = "hunter"
-			CallRemoteEvent(k, "SetRoleClient", Players[k].role)
+			CallRemoteEvent(k, "SetRoleClient", Players[k].role, round_number)
 			SetPlayerWeapon(k, 11, 9999, true, 1)
+			SetPlayerLocation(k, 8927, 6330, 200)
+			SetPlayerSpawnLocation(k, 8927, 6330, 200, 70.0)
 		end
-		SetPlayerLocation(k, 2288.000000, -170, 250, 90.0)
 	end
 	CountdownTime = 300
 	if Timer ~= 0 then
@@ -121,17 +132,14 @@ function CheckWeaponsTimer()
 end
 
 AddEvent("OnPackageStart", function()
-	for k, v in pairs(GetAllPlayers()) do
-		InitPlayer(v)
-	end
     WeaponsTimer = CreateTimer(CheckWeaponsTimer, 1000)
 end)
 
 AddEvent("OnPlayerJoin", function(player)
-	--print("OnPlayerJoin", player)
+	print("OnPlayerJoin", GetPlayerName(player))
 	--SetPlayerSpawnLocation(player, 125773.000000, 80246.000000, 1645.000000, 90.0)
-	SetPlayerSpawnLocation(player, 2288.000000, -170, 100, 90.0)
-	SetPlayerRespawnTime(player, 1000)
+	SetPlayerSpawnLocation(player, 2288.000000, -170, 275, 90.0)
+	SetPlayerRespawnTime(player, 3000)
 
 	--InitPlayer(player)
 end)
@@ -161,13 +169,13 @@ AddEvent("OnPlayerQuit", function(player)
 		if Players[player].role == "hunter" then
 			if GetHuntersCount() <= 1 then
 				AddPlayerChatAll("[PROPHUNT]: Props won !")
-				CheckToRestart(true)
+				CheckToRestart(player)
 			end
 		end
 		if Players[player].role == "prop" then
 			if GetPropsCount() <= 1 then
 				AddPlayerChatAll("[PROPHUNT]: Hunters won !")
-				CheckToRestart(true)
+				CheckToRestart(player)
 			end
 		end
 		Players[player] = nil
