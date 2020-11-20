@@ -6,11 +6,22 @@ function speclogic(cmdply,ply)
      CallRemoteEvent(cmdply, "SpecRemoteEvent", true, ply, x, y, z)
 end
 
+function table.len(T)
+	local count = 0
+	for _ in pairs(T) do count = count + 1 end
+	return count
+end
+
 function ChangePlayerSpec(ply, specply)
+    local tbl = {}
     for k, v in pairs(GetAllPlayers()) do
         if (ply ~= v and specply ~= v and Players[v] and (Players[v].role == "hunter" or Players[v].role == "prop")) then
-            speclogic(ply, v)
+            table.insert(tbl, v)
         end
+    end
+    local len = table.len(tbl)
+    if len > 0 then
+       speclogic(ply, tbl[math.random(len)])
     end
 end
 

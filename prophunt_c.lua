@@ -187,11 +187,17 @@ function ConfigurePlayerCollisions()
 				--AddPlayerChat("Ignoring colis "..v)
 			else
 				--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
-				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
+				--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
 				if Props[v] then
+					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
 					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
 					Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+					Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
+				elseif GetPlayerPropertyValue(v, "Spectating") then
+				    Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+				    Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
 				else
+					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
 					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
 				end
 				--AddPlayerChat("NOT Ignoring colis "..v)
@@ -295,7 +301,7 @@ AddEvent("OnRenderHUD", function()
 	SetDrawColor(RGB(255, 255, 255))
 	SetTextDrawScale(1.0, 1.0)
 	DrawText(30.0, ScreenY - 60.0, "TIME: ".. GameTime)
-	DrawText(30.0, ScreenY - 40.0, "Props 0, Hunter 0")
+	--DrawText(30.0, ScreenY - 40.0, "Props 0, Hunter 0")
 
 	SetTextDrawScale(1.3, 1.3)
 	SetDrawColor(RGB(255, 113, 0))

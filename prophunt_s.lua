@@ -70,6 +70,7 @@ function StartNewRound()
 			SetPlayerLocation(k, 8927, 6330, 200)
 			SetPlayerSpawnLocation(k, 8927, 6330, 200, 70.0)
 		end
+		SetPlayerHealth(k, 100)
 	end
 	CountdownTime = 300
 	if Timer ~= 0 then

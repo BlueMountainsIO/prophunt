@@ -97,18 +97,19 @@ end)
 AddEvent("OnPlayerNetworkUpdatePropertyValue", function(ply, propertyName, propertyValue)
     if (ply ~= GetPlayerId() and propertyName == "Spectating") then
         if not propertyValue then
-            AddPlayerChat("oh no " .. tostring(ply))
+            AddPlayerChat("no spec " .. tostring(ply))
             ResetPlayerCapsuleAndBody(ply)
         else
-            AddPlayerChat("no u " .. tostring(ply))
+            AddPlayerChat("spec " .. tostring(ply))
             local Body = GetPlayerSkeletalMeshComponent(ply, "Body")
             Body:SetVisibility(false, false)
+            ConfigurePlayerCollisions()
         end
     end
 end)
 
 AddEvent("OnKeyPress",function(key)
-    if (spec and key=="E") then
+    if (spec and key == "E") then
         CallRemoteEvent("ChangeSpec", specply)
     end
 end)
