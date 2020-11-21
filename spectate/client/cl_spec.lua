@@ -19,12 +19,31 @@ function checkuntilvalid()
    end
 end
 
+function ConfigureSpecCollisions()
+	-- If we are a prop as well, we don't want collision between props
+    for k, v in pairs(GetStreamedPlayers()) do
+        local PlayerActor = GetPlayerActor(v)
+	    if PlayerActor then
+            local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
+            Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+            Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+            if Props[v] then
+                Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+                Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+            end
+        end
+	end
+end
+
 AddRemoteEvent("SpecRemoteEvent",function(bool,plyid,x,y,z)
     if bool == false then
-       spec = false
-       specply = nil
+        spec = false
+        specply = nil
+        SetCameraLocation(0,0,0,false)
+        SetCameraRotation(0,0,0,false)
     else
         MyPropHuntRole = "spec"
+        WaitingForPlayers = false
         specply = plyid
         actor = GetPlayerActor(GetPlayerId())
         actor:SetActorLocation(FVector( x,y,z))
@@ -32,6 +51,11 @@ AddRemoteEvent("SpecRemoteEvent",function(bool,plyid,x,y,z)
             DestroyTimer(checktimer)
         end
         checktimer = CreateTimer(checkuntilvalid,10)
+        if (Props[GetPlayerId()] and Props[GetPlayerId()]:IsValid()) then
+            Props[GetPlayerId()]:Destroy()
+            Props[GetPlayerId()] = nil
+        end
+        ConfigureSpecCollisions()
     end
 end)
 
@@ -103,7 +127,16 @@ AddEvent("OnPlayerNetworkUpdatePropertyValue", function(ply, propertyName, prope
             AddPlayerChat("spec " .. tostring(ply))
             local Body = GetPlayerSkeletalMeshComponent(ply, "Body")
             Body:SetVisibility(false, false)
-            ConfigurePlayerCollisions()
+            local PlayerActor = GetPlayerActor(ply)
+            if PlayerActor then
+                local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
+                Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+                Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+            end
+            if (Props[ply] and Props[ply]:IsValid()) then
+                Props[ply]:Destroy()
+                Props[ply] = nil
+            end
         end
     end
 end)

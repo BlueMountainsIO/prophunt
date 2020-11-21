@@ -4,7 +4,7 @@ Prophunt client
 
 ]]--
 
-local Props = { }
+Props = { }
 local GameTime = ""
 local LastTracedComp
 local TraceTimeMS = 80
@@ -16,7 +16,7 @@ local PropSounds = {
 	"sounds/bruh.m4a",
 	"sounds/dolphin.m4a"
 }
-local WaitingForPlayers = true
+WaitingForPlayers = true
 local HunterWaitTime = 30000
 MyPropHuntRole = ""
 local round_number
@@ -173,36 +173,40 @@ function SetPlayerPropByMesh(player, mesh)
 	SetPropInternal(player, mesh)
 end
 
+function Config_Player_Collision(v)
+    local PlayerActor = GetPlayerActor(v)
+	if PlayerActor then
+		local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
+		if (Props[v] ~= nil and Props[GetPlayerId()] ~= nil) then
+			Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+			Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+			Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+			Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+			--AddPlayerChat("Ignoring colis "..v)
+		else
+			--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+			--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
+			if Props[v] then
+				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
+			elseif GetPlayerPropertyValue(v, "Spectating") then
+				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
+				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
+			else
+				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
+				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
+			end
+			--AddPlayerChat("NOT Ignoring colis "..v)
+		end
+	end
+end
+
 function ConfigurePlayerCollisions()
 	-- If we are a prop as well, we don't want collision between props
 	for k, v in pairs(GetStreamedPlayers()) do
-		local PlayerActor = GetPlayerActor(v)
-		if PlayerActor then
-			local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
-			if (Props[v] ~= nil and Props[GetPlayerId()] ~= nil) then
-				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
-				Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
-				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
-				Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
-				--AddPlayerChat("Ignoring colis "..v)
-			else
-				--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
-				--Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
-				if Props[v] then
-					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
-					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
-					Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
-					Props[v]:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
-				elseif GetPlayerPropertyValue(v, "Spectating") then
-				    Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Ignore)
-				    Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Ignore)
-				else
-					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Camera, ECollisionResponse.ECR_Block)
-					Capsule:SetCollisionResponseToChannel(ECollisionChannel.ECC_Pawn, ECollisionResponse.ECR_Block)
-				end
-				--AddPlayerChat("NOT Ignoring colis "..v)
-			end
-		end
+		Config_Player_Collision(v)
 	end
 end
 
@@ -212,6 +216,8 @@ AddEvent("OnPlayerStreamIn", function(player)
 
 	if PropAsset ~= nil then
 		SetPlayerPropByAsset(player, PropAsset)
+	else
+		Config_Player_Collision(player)
 	end
 end)
 

@@ -20,8 +20,10 @@ function ChangePlayerSpec(ply, specply)
         end
     end
     local len = table.len(tbl)
-    if len > 0 then
+    if len > 1 then
        speclogic(ply, tbl[math.random(len)])
+    elseif len == 1 then
+        speclogic(ply, tbl[1])
     end
 end
 

@@ -21,9 +21,12 @@ function CheckToRestart(from_quit_player)
 		Timer = 0
 	end
 	if from_quit_player then
-        soustract = 1
+		soustract = 1
 	end
 	if GetPlayerCount() - soustract > 1 then
+		if from_quit_player then
+			Players[from_quit_player] = nil
+		end
 		StartNewRound()
 	elseif GetPlayerCount() - soustract == 1 then
 		local ply = GetAllPlayers()[1]
@@ -115,12 +118,14 @@ function InitPlayer(player)
 	Players[player].taunt_cooldown = 0
 	Players[player].role = ""
 	if GameState == 0 then
+		print("GetPlayerCount() " .. tostring(GetPlayerCount()))
 		if GetPlayerCount() > 1 then
 			StartNewRound()
 		end
 	else
 		Players[player].role = "spec"
 		ChangePlayerSpec(player, player)
+		print("spec InitPlayer")
 	end
 end
 
@@ -237,5 +242,21 @@ end)
 AddRemoteEvent("SetWeaponHunter", function(ply)
 	if Players[ply].role == "hunter" then
 		SetPlayerWeapon(ply, 11, 9999, true, 1)
+	end
+end)
+
+AddEvent("OnPlayerWeaponShot", function(ply, weap, hittype, hitid, hitX, hitY, hitZ, startX, startY, startZ, normalX, normalY, normalZ, BoneName)
+	if Players[ply] then
+		if hittype == HIT_PLAYER then
+			if Players[ply].role == "hunter" then
+				if Players[hitid] then
+					if Players[hitid].role == "hunter" then
+					    return false
+					end
+				end
+			else
+				return false
+			end
+		end
 	end
 end)
