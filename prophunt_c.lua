@@ -262,13 +262,13 @@ function ResetPlayerCapsuleAndBody(player)
 	local Capsule = PlayerActor:GetComponentsByClass(UCapsuleComponent.Class())[1]
 	Capsule:SetCapsuleSize(30.0, 93.0, true)
 	ConfigurePlayerCollisions()
-	AddPlayerChat("RESET : " .. tostring(player))
+	--AddPlayerChat("RESET : " .. tostring(player))
 end
 
 AddEvent("OnPlayerNetworkUpdatePropertyValue", function(player, propertyName, propertyValue)
 	if propertyName == "PropAsset" then
 		if propertyValue then
-			AddPlayerChat("SetPlayerPropByAsset : " .. tostring(player))
+			--AddPlayerChat("SetPlayerPropByAsset : " .. tostring(player))
 			SetPlayerPropByAsset(player, propertyValue)
 		else
 			ResetPlayerCapsuleAndBody(player)
@@ -393,6 +393,10 @@ AddRemoteEvent("SetRoleClient", function(role, round_nb)
 			DestroyTextBox(textbox)
 		end)
 		WaitingForPlayers = false
+		if LastTracedComp then
+			LastTracedComp:SetRenderCustomDepth(false)
+			LastTracedComp = nil
+		end
 		ConfigurePlayerCollisions()
 	else
 		WaitingForPlayers = false

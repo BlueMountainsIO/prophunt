@@ -11,7 +11,12 @@ local Timer = 0
 local WeaponsTimer
 local GameState = 0 -- 0 : waiting, 1 : in game
 local round_number = 0
-local last_role = "prop"
+local last_hunters = {}
+local ratio_hunters_props = 4 -- 1 hunter for 4 props
+
+local function GetPropHuntPlayerCount()
+    return table.len(Players)
+end
 
 function CheckToRestart(from_quit_player)
 	local soustract = 0
@@ -39,21 +44,87 @@ function CheckToRestart(from_quit_player)
 		SetPlayerPropertyValue(ply, "Spectating", nil)
 		SetPlayerPropertyValue(ply, "PropAsset", "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01")
 		SetPlayerPropertyValue(ply, "PropRotation", 0.0)
+	else
+		last_hunters = {}
 	end
+end
+
+local function GeneratePotentialHuntersTable()
+	local tbl = {}
+	for ply, v in pairs(Players) do
+		local steamid = tostring(GetPlayerSteamId(ply))
+		local was_hunter
+		for i, v2 in ipairs(last_hunters) do
+			if v2 == steamid then
+				was_hunter = true
+				break
+			end
+		end
+		if not was_hunter then
+            table.insert(tbl, ply)
+		end
+	end
+	if table.len(tbl) == 0 then
+        for ply, v in pairs(Players) do
+			table.insert(tbl, ply)
+		end
+	elseif table.len(tbl) < math.ceil(GetPropHuntPlayerCount() / 4) then
+		for ply, v2 in pairs(Players) do
+			local cant_insert
+			for i, v in ipairs(tbl) do
+				if ply == v then
+                    cant_insert = true
+				end
+			end
+			if not cant_insert then
+				table.insert(tbl, ply)
+				if table.len(tbl) >= math.ceil(GetPropHuntPlayerCount() / 4) then
+					break
+				end
+		    end
+		end
+	end
+	return tbl
+end
+
+local function SetHunter(ply)
+    CallRemoteEvent(ply, "SpecRemoteEvent", false)
+	SetPlayerPropertyValue(ply, "Spectating", nil)
+	SetPlayerPropertyValue(ply, "PropAsset", nil)
+	Players[ply].role = "hunter"
+	CallRemoteEvent(ply, "SetRoleClient", Players[ply].role, round_number)
+	SetPlayerWeapon(ply, 11, 9999, true, 1)
+	SetPlayerLocation(ply, 8927, 6330, 200)
+	SetPlayerSpawnLocation(ply, 8927, 6330, 200, 70.0)
+	SetPlayerHealth(ply, 100)
+	table.insert(last_hunters, tostring(GetPlayerSteamId(ply)))
 end
 
 function StartNewRound()
 	GameState = 1
-	local role = last_role
-	if role == "prop" then
-		last_role = "hunter"
-	else
-		last_role = "prop"
-	end
 	round_number = round_number + 1
 	for k, v in pairs(Players) do
-		if role == "prop" then
-			role = "hunter"
+		Players[k].role = ""
+	end
+	local potential_hunters = GeneratePotentialHuntersTable()
+	local len_tbl = table.len(potential_hunters)
+	last_hunters = {}
+	local _hunters = math.ceil(GetPropHuntPlayerCount() / 4)
+	if _hunters > 1 then
+		for i = 1, _hunters do
+			local random = math.random(len_tbl)
+			SetHunter(potential_hunters[random])
+			table.remove(potential_hunters, random)
+		end
+	else
+		if len_tbl == 1 then
+			SetHunter(potential_hunters[1])
+		else
+			SetHunter(potential_hunters[math.random(len_tbl)])
+		end
+	end
+	for k, v in pairs(Players) do
+		if v.role ~= "hunter" then
 			CallRemoteEvent(k, "SpecRemoteEvent", false)
 			SetPlayerPropertyValue(k, "Spectating", nil)
 			SetPlayerPropertyValue(k, "PropAsset", "/Game/Geometry/DesertGasStation/Meshes/Props/SM_Bench_01")
@@ -62,18 +133,8 @@ function StartNewRound()
 			CallRemoteEvent(k, "SetRoleClient", Players[k].role, round_number)
 			SetPlayerLocation(k, 2288.000000, -170, 275)
 			SetPlayerSpawnLocation(k, 2288.000000, -170, 275, 90.0)
-		elseif role == "hunter" then
-			role = "prop"
-			CallRemoteEvent(k, "SpecRemoteEvent", false)
-			SetPlayerPropertyValue(k, "Spectating", nil)
-			SetPlayerPropertyValue(k, "PropAsset", nil)
-			Players[k].role = "hunter"
-			CallRemoteEvent(k, "SetRoleClient", Players[k].role, round_number)
-			SetPlayerWeapon(k, 11, 9999, true, 1)
-			SetPlayerLocation(k, 8927, 6330, 200)
-			SetPlayerSpawnLocation(k, 8927, 6330, 200, 70.0)
+			SetPlayerHealth(k, 100)
 		end
-		SetPlayerHealth(k, 100)
 	end
 	CountdownTime = 300
 	if Timer ~= 0 then
@@ -118,14 +179,14 @@ function InitPlayer(player)
 	Players[player].taunt_cooldown = 0
 	Players[player].role = ""
 	if GameState == 0 then
-		print("GetPlayerCount() " .. tostring(GetPlayerCount()))
-		if GetPlayerCount() > 1 then
+		--print("GetPropHuntPlayerCount() " .. tostring(GetPropHuntPlayerCount()))
+		if GetPropHuntPlayerCount() > 1 then
 			StartNewRound()
 		end
 	else
 		Players[player].role = "spec"
 		ChangePlayerSpec(player, player)
-		print("spec InitPlayer")
+		--print("spec InitPlayer")
 	end
 end
 
@@ -142,7 +203,7 @@ AddEvent("OnPackageStart", function()
 end)
 
 AddEvent("OnPlayerJoin", function(player)
-	print("OnPlayerJoin", GetPlayerName(player))
+	--print("OnPlayerJoin", GetPlayerName(player))
 	--SetPlayerSpawnLocation(player, 125773.000000, 80246.000000, 1645.000000, 90.0)
 	SetPlayerSpawnLocation(player, 2288.000000, -170, 275, 90.0)
 	SetPlayerRespawnTime(player, 3000)
@@ -216,10 +277,23 @@ end)
 
 AddEvent("OnPlayerChat", function(player, message)
 
-	message = message:gsub("<span.->(.-)</>", "%1") -- removes chat span tag
+	if Players[player] then
+		local fullchatmessage
+		if (Players[player].role == "prop" or Players[player].role == "hunter") then
+			message = message:gsub("<span.->(.-)</>", "%1") -- removes chat span tag
+			local color
+			if Players[player].role == "prop" then
+				color = "#7a3dd1"
+			elseif Players[player].role == "hunter" then
+				color = "#8b0000"
+			end
+			fullchatmessage = '<span color="'.. color ..'">['.. string.upper(Players[player].role) ..']</> '..GetPlayerName(player)..'('..player..'): '..message
+		else
+			fullchatmessage = GetPlayerName(player)..'('..player..'): '..message
+	    end
 
-	local fullchatmessage = '<span color="#7a3dd1">[PROP]</> '..GetPlayerName(player)..'('..player..'): '..message
-	AddPlayerChatAll(fullchatmessage)
+		AddPlayerChatAll(fullchatmessage)
+	end
 
 end)
 

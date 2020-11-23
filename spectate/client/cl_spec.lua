@@ -121,10 +121,10 @@ end)
 AddEvent("OnPlayerNetworkUpdatePropertyValue", function(ply, propertyName, propertyValue)
     if (ply ~= GetPlayerId() and propertyName == "Spectating") then
         if not propertyValue then
-            AddPlayerChat("no spec " .. tostring(ply))
+            --AddPlayerChat("no spec " .. tostring(ply))
             ResetPlayerCapsuleAndBody(ply)
         else
-            AddPlayerChat("spec " .. tostring(ply))
+            --AddPlayerChat("spec " .. tostring(ply))
             local Body = GetPlayerSkeletalMeshComponent(ply, "Body")
             Body:SetVisibility(false, false)
             local PlayerActor = GetPlayerActor(ply)
