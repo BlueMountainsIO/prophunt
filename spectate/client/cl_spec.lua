@@ -9,6 +9,7 @@ function checkuntilvalid()
    for i, ply in pairs(GetStreamedPlayers()) do
       if ply == specply then
          spec=true
+         SetIgnoreLookInput(true)
          DestroyTimer(checktimer)
          checktimer = nil
          if IsFirstPersonCamera() then
@@ -20,7 +21,6 @@ function checkuntilvalid()
 end
 
 function ConfigureSpecCollisions()
-	-- If we are a prop as well, we don't want collision between props
     for k, v in pairs(GetStreamedPlayers()) do
         local PlayerActor = GetPlayerActor(v)
 	    if PlayerActor then
@@ -39,6 +39,7 @@ AddRemoteEvent("SpecRemoteEvent",function(bool,plyid,x,y,z)
     if bool == false then
         spec = false
         specply = nil
+        SetIgnoreLookInput(false)
         SetCameraLocation(0,0,0,false)
         SetCameraRotation(0,0,0,false)
     else
@@ -66,6 +67,7 @@ function stopspec()
     needtorefirst=false
     spec=false
     specply=nil
+    SetIgnoreLookInput(false)
     SetCameraLocation(0,0,0,false)
     SetCameraRotation(0,0,0,false)
     CallRemoteEvent("NoLongerSpectating")
@@ -75,6 +77,8 @@ AddEvent("OnGameTick",function(ds)
     if spec then
         if IsValidPlayer(specply) then
             local x, y, z = GetPlayerLocation(specply)
+            local camx, camy, camz = GetCameraLocation(false)
+            local camrx, camry, camrz = GetCameraRotation(false)
             local x2, y2, z2 = GetPlayerLocation(GetPlayerId())
             local heading = GetPlayerHeading(specply)
             if not GetPlayerPropertyValue(specply, "Spectating") then
@@ -85,12 +89,18 @@ AddEvent("OnGameTick",function(ds)
                if GetPlayerVehicle(specply) == 0 then
                   local fx,fy,fz = GetPlayerForwardVector(specply)
                   local hittype, hitid, impactX, impactY, impactZ = LineTrace(x-fx*40,y-fy*40,z,x-fx*300, y-fy*300, z+150)
-                  if (hittype~=2 and impactX==0 and impactY==0 and impactZ==0) then
-                      SetCameraLocation(x-fx*300, y-fy*300, z+150 , true)
-                      SetCameraRotation(-25,heading,0)
+                  local rot = FMath.RInterpTo(FRotator(camrx, camry, camrz), FRotator(-25, heading, 0), ds, 2.0)
+                  SetCameraRotation(rot.Pitch, rot.Yaw, rot.Roll, true)
+                  if (hittype ~= 2 and impactX == 0 and impactY == 0 and impactZ == 0) then
+                      local loc = FMath.VInterpTo(FVector(camx, camy, camz), FVector(x-fx*300, y-fy*300, z+150), ds, 2.0)
+                      SetCameraLocation(loc.X, loc.Y, loc.Z, true)
+                      --SetCameraLocation(x-fx*300, y-fy*300, z+150 , true)
+                      --SetCameraRotation(-25, heading, 0)
                   else
-                      SetCameraLocation(impactX, impactY, impactZ , true)
-                      SetCameraRotation(-25,heading,0)
+                      local loc = FMath.VInterpTo(FVector(camx, camy, camz), FVector(impactX, impactY, impactZ), ds, 2.0)
+                      SetCameraLocation(loc.X, loc.Y, loc.Z, true)
+                      --SetCameraLocation(impactX, impactY, impactZ , true)
+                      --SetCameraRotation(-25, heading, 0)
                   end
                else
                    local veh = GetPlayerVehicle(specply)
@@ -152,3 +162,9 @@ AddEvent("OnRenderHUD", function()
         DrawText(5, 400, "Press E to change the spectated player")
     end
 end)
+
+--[[AddCommand("spectest", function(ply)
+    local plytospec = tonumber(ply)
+    spec = true
+    specply = plytospec
+end)]]--
