@@ -5,5 +5,9 @@ AddEvent("OnPackageStart", function()
 	
 		local mapname = "/Industrial_Area/industrial_area/maps/industrial_area"
 		ConnectToServer(GetServerIP(), GetServerPort(), "", mapname)
+	else
+		Delay(1000, function()
+		    CallRemoteEvent("PlayerJoined")
+		end)
 	end
 end)

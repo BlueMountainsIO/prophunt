@@ -2,14 +2,18 @@
 	"author": "Blue Mountains",
 	"version": "1.0",
 	"server_scripts": [
-		"prophunt_s.lua"
+		"prophunt_s.lua",
+		"spectate/server/spec.lua"
 	],
 	"client_scripts": [
-		"prophunt_c.lua"
+		"prophunt_c.lua",
+		"maps/map.lua",
+		"spectate/client/cl_spec.lua"
 	],
 	"files": [
 		"sounds/ui_interact1.mp3",
 		"sounds/bruh.m4a",
-		"sounds/dolphin.m4a"
+		"sounds/dolphin.m4a",
+		"maps/Industrial_Area.pak"
 	]
 }
